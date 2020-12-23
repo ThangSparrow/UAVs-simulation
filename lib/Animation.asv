@@ -48,7 +48,7 @@ title('y[m]');
 grid on; hold on;
 
 subplot(2,3,6)
-title('z[m]');
+title('zdot[m/s]');
 grid on; hold on;
 
 %% ANIMATION
@@ -94,10 +94,10 @@ for i = 1:simTime/0.01
     subplot(2,3,3)
         plot(i/100,rad2deg(drone1_state(9)),'.');
     subplot(2,3,4)
-        plot(i/100,drone1_state(1),'.');
+        plot(i/100,rad2deg(drone1_state(1)),'.');
     subplot(2,3,5)
         plot(i/100,drone1_state(2),'.');
     subplot(2,3,6)
-        plot(i/100,drone1_state(3),'.');
+        plot(i/100,drone1_state(6),'.');
        
 end

@@ -122,8 +122,7 @@ classdef Drone < handle
             obj.T = obj.u_attitude(1);
             obj.M = obj.u_attitude(2:4);
             
-            %% Initialize Attitude Controler
-            obj.attitude_cmd = zeros(4,1);
+            obj.attitude_cmd = zero(4,1);
             
             obj.phi_des = 0.0;
             obj.phi_err = 0.0;
@@ -160,35 +159,6 @@ classdef Drone < handle
             obj.kP_zdot = gains('P_zdot');
             obj.kI_zdot = gains('I_zdot');
             obj.kD_zdot = gains('D_zdot');
-            
-            %% Initialize Position Controler
-
-            obj.x_des = 0.0;
-            obj.x_err = 0.0;
-            obj.x_err_prev = 0.0;
-            obj.x_err_sum = 0.0;
-
-            obj.y_des = 0.0;
-            obj.y_err = 0.0;
-            obj.y_err_prev = 0.0;
-            obj.y_err_sum = 0.0;
-
-            obj.z_des = 0.0;
-            obj.z_err = 0.0;
-            obj.z_err_prev = 0.0;
-            obj.z_err_sum = 0.0;
-
-            obj.kP_x = gains('P_x');
-            obj.kI_x = gains('I_x');
-            obj.kD_x = gains('D_x');
-            
-            obj.kP_y = gains('P_y');
-            obj.kI_y = gains('I_y');
-            obj.kD_y = gains('D_y');
-            
-            obj.kP_z = gains('P_z');
-            obj.kI_z = gains('I_z');
-            obj.kD_z = gains('D_z');
         end
         
         function state = GetState(obj)
@@ -265,13 +235,8 @@ classdef Drone < handle
             obj.z_des = position_cmd(3);
             obj.z_err = obj.z_des - obj.r(3);
             
-            obj.u_position(3) = (obj.kP_z * obj.z_err + ...
-                                 obj.kI_z * obj.z_err_sum + ...
-                                 obj.kD_z * (obj.z_err - obj.z_err_prev)/obj.dt);
-            obj.z_err_sum = obj.z_err_sum + obj.z_err;
-            obj.z_err_prev = obj.z_err;
+            obj.u_position(3) = (obj.kP_z * obj.z_des 
             
-            obj.attitude_cmd(4) = obj.u_position(3);
         end
     end
 end
