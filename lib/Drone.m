@@ -135,7 +135,7 @@ classdef Drone < handle
             
             bRi = RPY2Rot(obj.euler);
             R = bRi';
-            obj.dx(4:6) = 1/obj.m * (-R * obj.T * [0;0;-1] + [0;0; obj.m*obj.g]);
+            obj.dx(4:6) = 1/obj.m * (R * obj.T * [0;0;-1] + [0;0; obj.m*obj.g]);
             
             s_p = sin(obj.euler(1)); c_p = cos(obj.euler(1));
             t_t = tan(obj.euler(2)); sec_t = sec(obj.euler(2));
@@ -158,13 +158,49 @@ classdef Drone < handle
         end
         
         function obj = AttitudeCtrl(obj, refSig)
-            obj.u(1) = refSig(1);
-            obj.u(2) = refSig(2);
-            obj.u(3) = refSig(3);
-            obj.u(4) = refSig(4);
+%             obj.u(1) = refSig(1);
+%             obj.u(2) = refSig(2);
+%             obj.u(3) = refSig(3);
+%             obj.u(4) = refSig(4);
+            
+            obj.phi_des = refSig(1);
+            obj.theta_des = refSig(2);
+            obj.psi_des = refSig(3);
+            obj.zdot_des = refSig(4);
+            
+            obj.phi_err = obj.phi_des - obj.euler(1);
+            obj.theta_err = obj.theta_des - obj.euler(2);
+            obj.psi_err = obj.psi_des - obj.euler(3);
+            obj.zdot_err = obj.zdot_des - obj.dr(3);
+            
+            obj.u(2) = (obj.kP_phi * obj.phi_err + ...
+                        obj.kI_phi * obj.phi_err_sum + ...
+                        obj.kD_phi * (obj.phi_err - obj.phi_err_prev)/obj.dt);
+            obj.phi_err_sum = obj.phi_err_sum + obj.phi_err;
+            obj.phi_err_prev = obj.phi_err;
+            
+            obj.u(3) = (obj.kP_theta * obj.theta_err + ...
+                        obj.kI_theta * obj.theta_err_sum + ...
+                        obj.kD_theta * (obj.theta_err - obj.theta_err_prev)/obj.dt);        
+            obj.theta_err_sum = obj.theta_err_sum + obj.theta_err;
+            obj.theta_err_prev = obj.theta_err;
+            
+            obj.u(4) = (obj.kP_psi * obj.psi_err + ...
+                        obj.kI_psi * obj.psi_err_sum + ...
+                        obj.kD_psi * (obj.psi_err - obj.psi_err_prev)/obj.dt);           
+            obj.psi_err_sum = obj.psi_err_sum + obj.psi_err;
+            obj.psi_err_prev = obj.psi_err;
+            
+            obj.u(1) = obj.m * obj.g - ((obj.kP_zdot * obj.zdot_err + ...
+                        obj.kI_zdot * obj.zdot_err_sum + ...
+                        obj.kD_zdot * (obj.zdot_err - obj.zdot_err_prev)/obj.dt));           
+            obj.zdot_err_sum = obj.zdot_err_sum + obj.zdot_err;
+            obj.zdot_err_prev = obj.zdot_err;
             
             obj.T = obj.u(1);
             obj.M = obj.u(2:4);
         end
+        
+        
     end
 end

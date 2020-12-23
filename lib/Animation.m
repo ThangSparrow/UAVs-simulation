@@ -2,7 +2,6 @@ close all;
 
 %% Init. 3D Fig.
 fig1 = figure('pos',[0 90 600 600]);
-h = gca;
 view(3);
 fig1.CurrentAxes.ZDir = 'Reverse';
 fig1.CurrentAxes.YDir = 'Reverse';
@@ -53,17 +52,13 @@ title('zdot[m/s]');
 grid on; hold on;
 
 %% ANIMATION
-commandSig(1) = -1.5*9.8;
-commandSig(2) = 0.01;
-commandSig(3) = 0.0;
-commandSig(4) = 0.0;
 for i = 1:simTime/0.01
    drone1.AttitudeCtrl(commandSig); 
    drone1.UpdateState();
    
    drone1_state = drone1.GetState();
    
-   % 3D Plot
+   %% 3D Plot
    figure(1)
    wHb = [RPY2Rot(drone1_state(7:9))' drone1_state(1:3); 0 0 0 1];
    drone1_world = wHb * drone1_body;
@@ -88,5 +83,20 @@ for i = 1:simTime/0.01
        'xData', drone1_atti(1,5), ...
        'yData', drone1_atti(2,5), ...
        'zData', 0);
+   
+   %% Data Plot
+    figure(2)
+    subplot(2,3,1)
+        plot(i/100,rad2deg(drone1_state(7)),'.');
+    subplot(2,3,2)
+        plot(i/100,rad2deg(drone1_state(8)),'.');    
+    subplot(2,3,3)
+        plot(i/100,rad2deg(drone1_state(9)),'.');
+    subplot(2,3,4)
+        plot(i/100,rad2deg(drone1_state(1)),'.');
+    subplot(2,3,5)
+        plot(i/100,drone1_state(2),'.');
+    subplot(2,3,6)
+        plot(i/100,drone1_state(6),'.');
        
 end
