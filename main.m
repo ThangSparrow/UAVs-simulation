@@ -3,16 +3,21 @@ close all;
 clc; clear;
 addpath('./lib');
 
+
 %% SIMULATED OBJECTS
 drone1_init;
-drone1 = Drone(drone1_params, drone1_initStates, drone1_Inputs, drone1_gains);
+drone1 = Drone(drone1_params, drone1_initStates, drone1_initInputs, drone1_gains);
 
-simTime = 1;
 
 %% RUN SIMULATION
-commandSig(1) = 0.0;
-commandSig(2) = 0.0;
-commandSig(3) = -3.0;
-commandSig(4) = 0.0;
-Animation;
+simTime = 2;
+stepSize = 0.01;
+iterNum = simTime/stepSize;
+
+commandSig = [deg2rad(10), deg2rad(10), deg2rad(30), 0]'; % phi theta psi zdot
+sim_data = simulation(iterNum,drone1,commandSig);
+
+
+%% RUN ANIMATION
+animation(sim_data, drone1.body, iterNum);
                     

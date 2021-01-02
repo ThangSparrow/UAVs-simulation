@@ -1,10 +1,10 @@
 classdef Drone < handle
 %% DYNAMICS
     properties
+        body
+        
         g
-        % simTime
         dt
-        % endTime
         
         m
         l
@@ -19,10 +19,9 @@ classdef Drone < handle
         dx
                     
         u_attitude          % [T_sum, M1, M2 ,M3]'
+        u_position          % [X, Y, Z, psi]'
         T                   % T_sum
         M                   % [M1, M2, M3]'
-        
-        u_position          % [X, Y, Z, psi]'
     end
     
 %% INPUT
@@ -66,7 +65,7 @@ classdef Drone < handle
         kI_zdot
         kD_zdot
         
-        %% Position control
+        %% Position Control
         x_des
         x_err
         x_err_prev
@@ -98,17 +97,22 @@ classdef Drone < handle
 %% METHODS
     methods
         %% CONSTRUCTOR
-        function obj = Drone(params, initStates, initInputs, gains) % , endTime)
+        function obj = Drone(params, initStates, initInputs, gains)
             obj.g = 9.81;
-            % obj.simTime = 0.0;
             obj.dt = 0.01;
-            % obj.endTime = endTime;
 
             obj.m = params('Mass');
             obj.l = params('armLength');
             obj.I = [params('Ixx'),             0,             0; ...
                                  0, params('Iyy'),             0; ...
                                  0,             0,  params('Izz')];
+                             
+            obj.body = [ obj.l,      0,     0,   1; ...  % first arm
+                             0, -obj.l,     0,   1; ...  % second arm
+                        -obj.l,      0,     0,   1; ...  % third arm
+                             0,  obj.l,     0,   1; ...  % fouth arm
+                             0,      0,     0,   1; ...  % center
+                             0,      0, -0.15,   1]';    % controller
 
             obj.x = initStates;                   
             obj.r = obj.x(1:3);  
@@ -121,9 +125,6 @@ classdef Drone < handle
             obj.u_attitude = initInputs;
             obj.T = obj.u_attitude(1);
             obj.M = obj.u_attitude(2:4);
-            
-            %% Initialize Attitude Controler
-            obj.attitude_cmd = zeros(4,1);
             
             obj.phi_des = 0.0;
             obj.phi_err = 0.0;
@@ -162,7 +163,6 @@ classdef Drone < handle
             obj.kD_zdot = gains('D_zdot');
             
             %% Initialize Position Controler
-
             obj.x_des = 0.0;
             obj.x_err = 0.0;
             obj.x_err_prev = 0.0;
@@ -189,6 +189,7 @@ classdef Drone < handle
             obj.kP_z = gains('P_z');
             obj.kI_z = gains('I_z');
             obj.kD_z = gains('D_z');
+            
         end
         
         function state = GetState(obj)
@@ -220,11 +221,18 @@ classdef Drone < handle
             obj.w = obj.x(10:12);
         end
         
-        function obj = AttitudeCtrl(obj)
-            obj.phi_des = obj.attitude_cmd(1);
-            obj.theta_des = obj.attitude_cmd(2);
-            obj.psi_des = obj.attitude_cmd(3);
-            obj.zdot_des = obj.attitude_cmd(4);
+        function obj = AttitudeCtrl(obj, attitude_cmd)
+            if isempty(attitude_cmd)
+                obj.phi_des = obj.attitude_cmd(1);
+                obj.theta_des = obj.attitude_cmd(2);
+                obj.psi_des = obj.attitude_cmd(3);
+                obj.zdot_des = obj.attitude_cmd(4);
+            else
+                obj.phi_des = attitude_cmd(1);
+                obj.theta_des = attitude_cmd(2);
+                obj.psi_des = attitude_cmd(3);
+                obj.zdot_des = attitude_cmd(4);
+            end
             
             obj.phi_err = obj.phi_des - obj.euler(1);
             obj.theta_err = obj.theta_des - obj.euler(2);
@@ -232,20 +240,20 @@ classdef Drone < handle
             obj.zdot_err = obj.zdot_des - obj.dr(3);
             
             obj.u_attitude(2) = (obj.kP_phi * obj.phi_err + ...
-                                 obj.kI_phi * obj.phi_err_sum + ...
-                                 obj.kD_phi * (obj.phi_err - obj.phi_err_prev)/obj.dt);
+                        obj.kI_phi * obj.phi_err_sum + ...
+                        obj.kD_phi * (obj.phi_err - obj.phi_err_prev)/obj.dt);
             obj.phi_err_sum = obj.phi_err_sum + obj.phi_err;
             obj.phi_err_prev = obj.phi_err;
             
             obj.u_attitude(3) = (obj.kP_theta * obj.theta_err + ...
-                                 obj.kI_theta * obj.theta_err_sum + ...
-                                 obj.kD_theta * (obj.theta_err - obj.theta_err_prev)/obj.dt);        
+                        obj.kI_theta * obj.theta_err_sum + ...
+                        obj.kD_theta * (obj.theta_err - obj.theta_err_prev)/obj.dt);        
             obj.theta_err_sum = obj.theta_err_sum + obj.theta_err;
             obj.theta_err_prev = obj.theta_err;
             
             obj.u_attitude(4) = (obj.kP_psi * obj.psi_err + ...
-                                 obj.kI_psi * obj.psi_err_sum + ...
-                                 obj.kD_psi * (obj.psi_err - obj.psi_err_prev)/obj.dt);           
+                        obj.kI_psi * obj.psi_err_sum + ...
+                        obj.kD_psi * (obj.psi_err - obj.psi_err_prev)/obj.dt);           
             obj.psi_err_sum = obj.psi_err_sum + obj.psi_err;
             obj.psi_err_prev = obj.psi_err;
             
@@ -259,19 +267,49 @@ classdef Drone < handle
             obj.M = obj.u_attitude(2:4);
         end
         
+
         function obj = PositionCtrl(obj, position_cmd)
-            obj.psi_des = position_cmd(4);
-            
+            obj.x_des = position_cmd(1);
+            obj.y_des = position_cmd(2);
             obj.z_des = position_cmd(3);
+            
+            %% Inertial frame
+%             x_err = obj.x_des - obj.r(1);
+%             y_err = obj.y_des - obj.r(2);
+            obj.x_err = obj.x_des - obj.r(1);
+            obj.y_err = obj.y_des - obj.r(2);
             obj.z_err = obj.z_des - obj.r(3);
             
+            %% Body frame
+%             xy = RPY2Rot([0, 0, obj.euler(3)])*[x_err y_err 1]';
+%             obj.x_err_b = xy(1);
+%             obj.y_err_b = xy(2);
+            
+            %% PIDs
+            obj.u_position(1) = -(obj.kP_x * obj.x_err + ...
+                                 obj.kI_x * obj.x_err_sum + ...
+                                 obj.kD_x * (obj.x_err - obj.x_err_prev)/obj.dt);
+            obj.u_position(2) = (obj.kP_y * obj.y_err + ...
+                                 obj.kI_y * obj.y_err_sum + ...
+                                 obj.kD_y * (obj.y_err - obj.y_err_prev)/obj.dt);
             obj.u_position(3) = (obj.kP_z * obj.z_err + ...
                                  obj.kI_z * obj.z_err_sum + ...
                                  obj.kD_z * (obj.z_err - obj.z_err_prev)/obj.dt);
+            
+            obj.x_err_sum = obj.x_err_sum + obj.x_err;
+            obj.y_err_sum = obj.y_err_sum + obj.y_err;
             obj.z_err_sum = obj.z_err_sum + obj.z_err;
+            
+            obj.x_err_prev = obj.x_err;
+            obj.y_err_prev = obj.y_err;
             obj.z_err_prev = obj.z_err;
             
-            obj.attitude_cmd(4) = obj.u_position(3);
+            obj.attitude_cmd(4) = obj.u_position(3);                        % z_dot_cmd
+            obj.attitude_cmd(3) = min(max(position_cmd(4),-pi/6),pi/6);     % psi_cmd
+            obj.attitude_cmd(2) = min(max(obj.u_position(1),-pi/6),pi/6);   % theta_cmd
+            obj.attitude_cmd(1) = min(max(obj.u_position(2),-pi/6),pi/6);   % phi_cmd
+            
         end
+
     end
 end
