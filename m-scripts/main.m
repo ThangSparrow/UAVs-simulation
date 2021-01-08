@@ -14,7 +14,7 @@ simTime = 2;
 stepSize = 0.01;
 iterNum = simTime/stepSize;
 
-commandSig = [deg2rad(10), deg2rad(10), deg2rad(30), 0]'; % phi theta psi zdot
+commandSig = [1, 3, -5, 0]'; % phi theta psi zdot
 sim_data = simulation(iterNum,drone1,commandSig);
 
 

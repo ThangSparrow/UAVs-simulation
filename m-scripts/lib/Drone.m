@@ -71,10 +71,14 @@ classdef Drone < handle
         x_err_prev
         x_err_sum
         
+        x_err_b
+        
         y_des
         y_err
         y_err_prev
         y_err_sum
+        
+        y_err_b
         
         z_des
         z_err
@@ -167,11 +171,15 @@ classdef Drone < handle
             obj.x_err = 0.0;
             obj.x_err_prev = 0.0;
             obj.x_err_sum = 0.0;
+            
+            obj.x_err_b = 0.0;
 
             obj.y_des = 0.0;
             obj.y_err = 0.0;
             obj.y_err_prev = 0.0;
             obj.y_err_sum = 0.0;
+            
+            obj.y_err_b = 0.0;
 
             obj.z_des = 0.0;
             obj.z_err = 0.0;
@@ -201,13 +209,12 @@ classdef Drone < handle
             
             bRi = RPY2Rot(obj.euler);
             R = bRi';
-            obj.dx(4:6) = 1/obj.m * (R * obj.T * [0;0;-1] + [0;0; obj.m*obj.g]);
+            obj.dx(4:6) = 1 / obj.m * (R * obj.T * [0;0;-1] + [0;0; obj.m*obj.g]);
             
-            s_p = sin(obj.euler(1)); c_p = cos(obj.euler(1));
-            t_t = tan(obj.euler(2)); sec_t = sec(obj.euler(2));
-            obj.dx(7:9) = [1    s_p*t_t        c_p*t_t; ...
-                           0    c_p            -s_p; ...
-                           0    s_p*sec_t      c_p*sec_t] * obj.w;
+            phi = obj.euler(1); theta = obj.euler(2);
+            obj.dx(7:9) = [1    sin(phi)*tan(theta)        cos(phi)*tan(theta);
+                           0    cos(phi)                   -sin(phi);
+                           0    sin(phi)*sec(theta)        cos(phi)*sec(theta)] * obj.w;
             obj.dx(10:12) = (obj.I) \ (obj.M - cross(obj.w, obj.I * obj.w));
         end 
         
@@ -222,7 +229,7 @@ classdef Drone < handle
         end
         
         function obj = AttitudeCtrl(obj, attitude_cmd)
-            if isempty(attitude_cmd)
+            if attitude_cmd == 0
                 obj.phi_des = obj.attitude_cmd(1);
                 obj.theta_des = obj.attitude_cmd(2);
                 obj.psi_des = obj.attitude_cmd(3);
@@ -273,35 +280,33 @@ classdef Drone < handle
             obj.y_des = position_cmd(2);
             obj.z_des = position_cmd(3);
             
-            %% Inertial frame
-%             x_err = obj.x_des - obj.r(1);
-%             y_err = obj.y_des - obj.r(2);
+            %% Errors in Inertial frame
             obj.x_err = obj.x_des - obj.r(1);
             obj.y_err = obj.y_des - obj.r(2);
             obj.z_err = obj.z_des - obj.r(3);
             
-            %% Body frame
-%             xy = RPY2Rot([0, 0, obj.euler(3)])*[x_err y_err 1]';
-%             obj.x_err_b = xy(1);
-%             obj.y_err_b = xy(2);
+            %% Errors in Body frame
+            xy = RPY2Rot([0, 0, obj.euler(3)])*[obj.x_err obj.y_err 1]';
+            obj.x_err_b = xy(1);
+            obj.y_err_b = xy(2);
             
             %% PIDs
-            obj.u_position(1) = -(obj.kP_x * obj.x_err + ...
+            obj.u_position(1) = -(obj.kP_x * obj.x_err_b + ...
                                  obj.kI_x * obj.x_err_sum + ...
                                  obj.kD_x * (obj.x_err - obj.x_err_prev)/obj.dt);
-            obj.u_position(2) = (obj.kP_y * obj.y_err + ...
+            obj.u_position(2) = (obj.kP_y * obj.y_err_b + ...
                                  obj.kI_y * obj.y_err_sum + ...
                                  obj.kD_y * (obj.y_err - obj.y_err_prev)/obj.dt);
             obj.u_position(3) = (obj.kP_z * obj.z_err + ...
                                  obj.kI_z * obj.z_err_sum + ...
                                  obj.kD_z * (obj.z_err - obj.z_err_prev)/obj.dt);
             
-            obj.x_err_sum = obj.x_err_sum + obj.x_err;
-            obj.y_err_sum = obj.y_err_sum + obj.y_err;
+            obj.x_err_sum = obj.x_err_sum + obj.x_err_b;
+            obj.y_err_sum = obj.y_err_sum + obj.y_err_b;
             obj.z_err_sum = obj.z_err_sum + obj.z_err;
             
-            obj.x_err_prev = obj.x_err;
-            obj.y_err_prev = obj.y_err;
+            obj.x_err_prev = obj.x_err_b;
+            obj.y_err_prev = obj.y_err_b;
             obj.z_err_prev = obj.z_err;
             
             obj.attitude_cmd(4) = obj.u_position(3);                        % z_dot_cmd
