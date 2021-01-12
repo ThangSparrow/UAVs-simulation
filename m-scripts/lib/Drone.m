@@ -229,7 +229,7 @@ classdef Drone < handle
         end
         
         function obj = AttitudeCtrl(obj, attitude_cmd)
-            if attitude_cmd == 0
+            if isempty(attitude_cmd)
                 obj.phi_des = obj.attitude_cmd(1);
                 obj.theta_des = obj.attitude_cmd(2);
                 obj.psi_des = obj.attitude_cmd(3);

@@ -26,21 +26,25 @@ function plot_script(data,cmdSig,stepSize)
     grid on; hold on;
     
     %% PLOT DATA
-    simPoins = size(data,1);
+    simTime = size(data,1)*stepSize;
+    simPoints = stepSize:stepSize:simTime;
     subplot(2,3,1)
-        plot(1:simPoins,rad2deg(data(:,7)),'r-');
+        plot(simPoints,rad2deg(data(:,7)),'r-');
     subplot(2,3,2)
-        plot(1:simPoins,rad2deg(data(:,8)),'r-');    
+        plot(simPoints,rad2deg(data(:,8)),'r-');    
     subplot(2,3,3)
-        plot(1:simPoins,rad2deg(data(:,9)),'-');
-        plot(1:simPoins,cmdSig(4)*ones(1,simPoins),'b-');
+        plot(simPoints,rad2deg(data(:,9)),'-');
+        plot(simPoints,cmdSig(4)*ones(1,size(simPoints,1)),'b-');
     subplot(2,3,4)
-        plot(1:simPoins,data(:,1),'r-');
-        plot(1:simPoins,cmdSig(1)*ones(1,simPoins),'b-');
+        plot(simPoints,data(:,1),'r-');
+        plot(simPoints,cmdSig(1)*ones(1,size(simPoints,1)),'b-');
+        legend({'Measured','Desired'},'Location','southoutside')
     subplot(2,3,5)
-        plot(1:simPoins,data(:,2),'r-');
-        plot(1:simPoins,cmdSig(2)*ones(1,simPoins),'b-');
+        plot(simPoints,data(:,2),'r-');
+        plot(simPoints,cmdSig(2)*ones(1,size(simPoints,1)),'b-');
+        legend({'Measured','Desired'},'Location','southoutside')
     subplot(2,3,6)
-        plot(1:simPoins,data(:,3),'r-');
-        plot(1:simPoins,cmdSig(3)*ones(1,simPoins),'b-');
+        plot(simPoints,data(:,3),'r-');
+        plot(simPoints,cmdSig(3)*ones(1,size(simPoints,1)),'b-');
+        legend({'Measured','Desired'},'Location','southoutside')
 end
